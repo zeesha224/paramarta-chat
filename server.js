@@ -12,6 +12,7 @@ if (!OPENAI_API_KEY) {
   process.exit(1);
 }
 
+// 🔹 Endpoint utama untuk Tampermonkey
 app.post('/openai-chat', async (req, res) => {
   try {
     const { prompt, page } = req.body;
@@ -40,6 +41,11 @@ app.post('/openai-chat', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Server error', message: err.message });
   }
+});
+
+// 🔹 Tambahan: route GET / supaya tidak muncul “Cannot GET /”
+app.get('/', (req, res) => {
+  res.send('✅ Server Paramarta Chat sudah aktif!');
 });
 
 const PORT = process.env.PORT || 3000;
