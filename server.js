@@ -1,17 +1,17 @@
 import express from 'express';
 import fetch from 'node-fetch';
-import cors from 'cors'; // <── tambah ini
+import cors from 'cors';
 import dotenv from 'dotenv';
+
 dotenv.config();
 
 const app = express();
-app.use(cors()); // <── dan ini
+app.use(cors()); // agar Tampermonkey bisa fetch
 app.use(express.json());
-
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 if (!OPENAI_API_KEY) {
-  console.error('Error: OPENAI_API_KEY belum di-set di file .env');
+  console.error('❌ Error: OPENAI_API_KEY belum di-set di Environment Variables.');
   process.exit(1);
 }
 
@@ -19,7 +19,9 @@ if (!OPENAI_API_KEY) {
 app.post('/openai-chat', async (req, res) => {
   try {
     const { prompt, page } = req.body;
-    if (!prompt) return res.status(400).json({ error: 'Prompt kosong' });
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt kosong' });
+    }
 
     const openaiResp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -30,7 +32,7 @@ app.post('/openai-chat', async (req, res) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: 'Kamu asisten ChatGPT untuk siswa SMP Paramarta Unggulan. Jawab dengan bahasa sopan, jelas, dan sesuai konteks pelajaran sekolah.' },
+          { role: 'system', content: 'Kamu adalah asisten ChatGPT untuk siswa SMP Paramarta Unggulan. Jawablah dengan sopan, jelas, dan sesuai konteks pelajaran sekolah.' },
           { role: 'user', content: `Halaman: ${page}\n\nPertanyaan: ${prompt}` }
         ],
         temperature: 0.6,
@@ -39,14 +41,21 @@ app.post('/openai-chat', async (req, res) => {
     });
 
     const data = await openaiResp.json();
-    const reply = data.choices?.[0]?.message?.content || '(tidak ada balasan)';
+
+    if (!data.choices || !data.choices[0]) {
+      console.error('⚠️ OpenAI API Error:', data);
+      return res.status(500).json({ error: 'Respons tidak valid dari OpenAI API' });
+    }
+
+    const reply = data.choices[0].message.content || '(tidak ada balasan)';
     res.json({ reply });
   } catch (err) {
+    console.error('⚠️ Server error:', err);
     res.status(500).json({ error: 'Server error', message: err.message });
   }
 });
 
-// 🔹 Tambahan: route GET / supaya tidak muncul “Cannot GET /”
+// 🔹 Route utama (GET /)
 app.get('/', (req, res) => {
   res.send('✅ Server Paramarta Chat sudah aktif!');
 });
